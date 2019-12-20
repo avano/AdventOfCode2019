@@ -1,0 +1,168 @@
+#!/usr/bin/env groovy
+
+abstract class Instruction {
+	def a1, a2, result
+	def parse(input, index) {
+		def code = input[index].padLeft(5, '0')
+		a1 = new Argument(input, code[2], input[index + 1] as int)
+		a2 = new Argument(input, code[1], input[index + 2] as int)
+		result = input[index + 3] as int
+	}
+
+	abstract invoke(input, index)
+
+	static create(code) {
+		switch (code) {
+			case '1':
+				return new Add()
+				break
+			case '2':
+				return new Multiply()
+				break
+			case '3':
+				return new Input()
+				break
+			case '4':
+				return new Output()
+				break
+			case '5':
+				return new JumpTrue()
+				break
+			case '6':
+				return new JumpFalse()
+				break
+			case '7':
+				return new LessThan()
+				break
+			case '8':
+				return new Equals()
+				break
+		}
+	}
+}
+
+class Add extends Instruction {
+	@Override
+	def invoke(input, index) {
+		parse(input, index)
+		input[super.result] = super.a1.get() + super.a2.get()
+		return index + 4
+	}
+}
+
+class Multiply extends Instruction {
+	@Override
+	def invoke(input, index) {
+		parse(input, index)
+		input[super.result] = super.a1.get() * super.a2.get()
+		return index + 4
+	}
+}
+
+class Input extends Instruction {
+	def static inp
+	@Override
+	def invoke(input, index) {
+		def result = input[index + 1] as int
+		input[result] = inp
+		return index + 2
+	}
+}
+
+class Output extends Instruction {
+	static last
+	@Override
+	def invoke(input, index) {
+		last = input[input[index + 1] as int]
+		return index + 2
+	}
+}
+
+class JumpTrue extends Instruction {
+	@Override
+	def invoke(input, index) {
+		parse(input, index)
+		if (super.a1.get() != 0) {
+			return a2.get()
+		} else {
+			return index + 3
+		}
+	}
+}
+
+class JumpFalse extends Instruction {
+	@Override
+	def invoke(input, index) {
+		parse(input, index)
+		if (super.a1.get() == 0) {
+			return a2.get()
+		} else {
+			return index + 3
+		}
+	}
+}
+
+class LessThan extends Instruction {
+	@Override
+	def invoke(input, index) {
+		parse(input, index)
+		if (super.a1.get() < super.a2.get()) {
+			input[super.result] = 1
+		} else {
+			input[super.result] = 0
+		}
+		return index + 4
+	}
+}
+
+class Equals extends Instruction {
+	@Override
+	def invoke(input, index) {
+		parse(input, index)
+		if (super.a1.get() == super.a2.get()) {
+			input[super.result] = 1
+		} else {
+			input[super.result] = 0
+		}
+		return index + 4
+	}
+}
+
+class Argument {
+	def input, mode
+	int value
+
+	Argument(input, mode, value) {
+		this.input = input
+		this.mode = mode
+		this.value = value
+	}
+
+	public int get() {
+		if (mode == '0') {
+			return input[value] as int
+		} else {
+			return value
+		}
+	}
+}
+
+public static void main(String[] args) {
+	run('first')
+	run('second')
+}
+
+def static run(part) {
+	def input = new File('resources/5').text.trim().split(',')
+	def i = 0
+	new Input().inp = 'first' == part ? 1 : 5
+	while (input[i] != '99') {
+		i = invokeInstruction(input, i)
+	}
+
+	println (('first' == part ? 'First part:  ' : 'Second part: ') + new Output().last)
+}
+
+def static invokeInstruction(input, index) {
+	return Instruction.create(input[index][-1]).invoke(input, index)
+}
