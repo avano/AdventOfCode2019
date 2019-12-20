@@ -1,0 +1,132 @@
+#!/usr/bin/env groovy
+
+class Coordinates {
+	int x, y, distance
+
+	Coordinates(x, y) {
+		this.x = x
+		this.y = y
+	}
+
+	Coordinates(x, y, distance) {
+		this.x = x
+		this.y = y
+		this.distance = distance
+	}
+
+	public increment(axis, step) {
+		if ('x' == axis) {
+			return new Coordinates(x + step, y, this.distance + 1)
+		} else {
+			return new Coordinates(x, y + step, this.distance + 1)
+		}
+	}
+
+	public boolean equals(o) {
+		if (this.is(o)) return true
+		if (getClass() != o.class) return false
+
+		Coordinates that = (Coordinates) o
+
+		if (x != that.x) return false
+		if (y != that.y) return false
+
+		return true
+	}
+
+	public int hashCode() {
+		int result
+		result = x
+		result = 31 * result + y
+		return result
+	}
+
+	@Override
+	public String toString() {
+		return "Coordinates{" +
+				"x=" + x +
+				", y=" + y +
+				", distance=" + distance +
+				'}';
+	}
+}
+
+class Crossing {
+	int x, y, steps
+
+	Crossing(int x, int y, int steps) {
+		this.x = x
+		this.y = y
+		this.steps = steps
+	}
+}
+
+def processDirection(currentCoordinate, direction) {
+	def axis, step
+	switch(direction) {
+		case 'U':
+			axis='y'
+			step=1
+			break
+		case 'D':
+			axis='y'
+			step=-1
+			break
+		case 'L':
+			axis='x'
+			step=-1
+			break
+		case 'R':
+			axis='x'
+			step=1
+			break
+	}
+
+	return currentCoordinate.increment(axis, step)
+}
+
+def getShortestDistance(Set crossings) {
+	def shortest = Integer.MAX_VALUE
+	crossings.each {crossing ->
+		def current = Math.abs(crossing.x) + Math.abs(crossing.y)
+		if (current < shortest) {
+			shortest = current
+		}
+	}
+	return shortest
+}
+
+public getLowestSteps(crossings) {
+	return (crossings as List).sort { it.steps }.first().steps
+}
+
+public static void main(String[] args) {
+	Set<Coordinates> visited = new HashSet<>()
+	Coordinates last = new Coordinates(0,0)
+	Set<Crossing> crossings = new HashSet<>()
+
+	def input = new File('resources/3').text.split('\n')
+	input[0].split(',').each { cmd ->
+		def direction = cmd.substring(0, 1)
+		def count = cmd.substring(1, cmd.size()) as int
+		count.times {
+			last = processDirection(last, direction)
+			visited << last
+		}
+	}
+
+	last = new Coordinates(0, 0)
+	input[1].split(',').each { cmd ->
+		def direction = cmd.substring(0, 1)
+		def count = cmd.substring(1, cmd.size()) as int
+		count.times {
+			last = processDirection(last, direction)
+			if (visited.contains(last)) {
+				crossings << new Crossing(last.x, last.y, visited.find { it == last }.distance + last.distance)
+			}
+		}
+	}
+
+	println "First part:  ${getShortestDistance(crossings)}"
+	println "Second part: ${getLowestSteps(crossings)}"
+}
