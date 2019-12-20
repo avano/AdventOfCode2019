@@ -1,0 +1,54 @@
+#!/usr/bin/env groovy
+
+def input = new File('resources/4').text.split('-')
+
+def passwordsFirst = []
+def passwordsSecond = []
+
+def isPasswordFirst(pass) {
+	def adjacent = false
+	for (def i = 0; i < pass.size() - 1; i++) {
+		if (pass[i] > pass[i + 1]) {
+			return false
+		}
+		if (pass[i] == pass[i + 1]) {
+			adjacent = true
+		}
+	}
+	return adjacent
+}
+
+def isPasswordSecond(pass) {
+	def adjacent = false
+	def last = -1
+	def adjacentCount = 1
+	for (def i = 0; i < pass.size(); i++) {
+		if (last == pass[i]) {
+			adjacentCount++
+			if (i == pass.size() - 1 && adjacentCount == 2)  {
+				adjacent = true
+			}
+		} else if (last > pass[i]) {
+			return false
+		} else {
+			last = pass[i]
+			if (adjacentCount == 2) {
+				adjacent = true
+			}
+			adjacentCount = 1
+		}
+	}
+	return adjacent
+}
+
+for (def i = (input[0] as int); i <= (input[1] as int); i++) {
+	if (isPasswordFirst(i as String)) {
+		passwordsFirst << i
+	}
+	if (isPasswordSecond(i as String)) {
+		passwordsSecond << i
+	}
+}
+
+println "First part  : ${passwordsFirst.size()}"
+println "Second part : ${passwordsSecond.size()}"
