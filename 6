@@ -1,0 +1,69 @@
+#!/usr/bin/env groovy
+
+class SpaceObject {
+	def name, orbitsAround
+
+	SpaceObject(name) {
+		this.name = name
+	}
+}
+
+public static void main(String[] args) {
+	Set<SpaceObject> objects = new HashSet<>()
+	new File('resources/6').text.trim().split('\n').each { relationship ->
+		def split = relationship.split('\\)')
+		getOrCreate(objects, split[1]).orbitsAround = getOrCreate(objects, split[0])
+	}
+	println 'First part:  ' + countObjects(objects)
+	println 'Second part: ' + transfers(objects)
+}
+
+def static getOrCreate(objects, name) {
+	SpaceObject o = objects.find { obj -> obj.name == name.trim() }
+	if (o == null) {
+		o = new SpaceObject(name.trim())
+		objects << o
+	}
+	return o
+}
+
+def static countObjects(objects) {
+	def count = 0
+	objects.each { so ->
+		count += countObject(so)
+	}
+	return count
+}
+
+def static countObject(obj) {
+	if (obj.orbitsAround == null) {
+		return 0
+	} else {
+		return 1 + countObject(obj.orbitsAround)
+	}
+}
+
+def static transfers(objects) {
+	def from = getOrCreate(objects, 'YOU').orbitsAround
+	def to = getOrCreate(objects, 'SAN').orbitsAround
+
+	def current = from
+	def visited = [:]
+	def hops = 0
+	while (current != null) {
+		current = current.orbitsAround
+		hops++
+		visited[current] = hops
+	}
+
+	current = to
+	hops = 0
+	while (!visited.containsKey(current)) {
+		hops++
+		if (current.orbitsAround == null) {
+			break
+		}
+		current = current.orbitsAround
+	}
+	return hops + (visited[current] as int)
+}
