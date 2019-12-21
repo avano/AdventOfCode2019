@@ -1,0 +1,88 @@
+#!/usr/bin/env groovy
+
+class Pixel {
+	def x, y, ch
+
+	Pixel(x, y, ch) {
+		this.x = x
+		this.y = y
+		this.ch = ch
+	}
+}
+
+class Map {
+	def pixels
+
+	Map(input) {
+		def pixels = []
+		def rows = input.split('\n')
+		for (def y = 0; y < rows.size(); y++) {
+			pixels << []
+			def columns = rows[y].collect()
+			for (def x = 0; x < columns.size(); x++) {
+				pixels.last() << new Pixel(x, y, columns[x])
+			}
+		}
+		this.pixels = pixels
+	}
+
+	public getAsteroids() {
+		return pixels.flatten().findAll { pixel -> pixel.ch == '#' }
+	}
+
+	public String toString() {
+		def str = ""
+		pixels.each { row ->
+			str += row.collect { pixel -> pixel.ch }.join("") + "\n"
+		}
+		return str
+	}
+}
+
+def scan(station, pixels) {
+	def visible = new HashSet<>()
+	pixels.clone().minus(station).each {
+		visible << getAngle(station, it)
+	}
+	return visible.size()
+}
+
+def getAngle(base, p1) {
+	return Math.atan2(p1.x - base.x, p1.y - base.y)
+}
+
+def distance(p1, p2) {
+	return Math.abs(p1.x - p2.x) + Math.abs(p1.y - p2.y)
+}
+
+def map = new Map(new File('resources/10').text.trim())
+
+def asteroids = map.getAsteroids()
+def station
+def max = 0
+asteroids.each { a ->
+	def current = scan(a, asteroids)
+	if (current > max) {
+		max = current
+		station = a
+	}
+}
+
+println "First part:  ${max}"
+
+def angles = new TreeMap<>(Collections.reverseOrder()).withDefault {[]}
+
+map.getAsteroids().minus(station).sort { a -> distance(station, a) }.each { a ->
+	angles[getAngle(station, a)] << a
+}
+
+def vaporizedCount = 1
+while (angles.any { k, v -> !v.isEmpty() }) {
+	angles.findAll { key, value -> !value.isEmpty() }.each { key, value ->
+		if (vaporizedCount == 200) {
+			println "Second part: ${value[0].x * 100 + value[0].y}"
+		}
+		angles[key] = value.tail()
+		vaporizedCount++
+	}
+}
