@@ -1,0 +1,41 @@
+#!/usr/bin/env groovy
+
+def width = 25
+def height = 6
+
+class Layer {
+	def pixels
+
+	Layer(pixels) {
+		this.pixels = pixels
+	}
+
+	def countZeroes() {
+		return pixels.flatten().findAll { it == '0' }.size()
+	}
+
+	def getAnswer() {
+		return pixels.flatten().findAll { it == '1' }.size() * pixels.flatten().findAll { it == '2' }.size()
+	}
+}
+
+def input = new File('resources/8').text.trim().collect()
+def layers = []
+input.collate(width).collate(height).each { l -> layers << new Layer(l) }
+println "First part:  " + layers.clone().sort { l -> l.countZeroes() }.first().getAnswer()
+
+def layerResult = new Layer(new String[height][width])
+
+height.times { h ->
+	width.times { w ->
+		layerResult.pixels[h][w] = layers.findAll { l -> l.pixels[h][w] != '2' }.first().pixels[h][w]
+	}
+}
+
+println "Second part: "
+layerResult.pixels.each { row ->
+	row.each { c ->
+		print c == '0' ? ' ' : '█'
+	}
+	println()
+}
