@@ -1,0 +1,145 @@
+#!/usr/bin/env groovy
+
+class Vector {
+	def x, y, z
+
+	Vector(x, y, z) {
+		this.x = x
+		this.y = y
+		this.z = z
+	}
+
+	def add(v2) {
+		this.x += v2.x
+		this.y += v2.y
+		this.z += v2.z
+	}
+
+	def static compare(v1, v2) {
+		def result = new Vector(0, 0, 0)
+		['x', 'y', 'z'].each { axis ->
+			if (v1."${axis}" != v2."${axis}") {
+				result."${axis}" = v1."${axis}" > v2."${axis}" ? -1 : 1
+			}
+		}
+		return result
+	}
+
+	def static invert(v) {
+		v.x *= -1
+		v.y *= -1
+		v.z *= -1
+		return v
+	}
+
+	def getEnergy() {
+		return Math.abs(x) + Math.abs(y) + Math.abs(z)
+	}
+
+	def copy() {
+		return new Vector(this.x, this.y, this.z)
+	}
+}
+
+class Moon {
+	def position, velocity
+
+	Moon(position) {
+		this.position = position
+		this.velocity = new Vector(0, 0, 0)
+	}
+
+	def applyVelocity() {
+		position.add(velocity)
+	}
+
+	def getEnergy() {
+		return position.getEnergy() * velocity.getEnergy()
+	}
+
+	def copy() {
+		return new Moon(position.copy())
+	}
+}
+
+def applyGravity(m1, m2) {
+	def diff = Vector.compare(m1.position, m2.position)
+	m1.velocity.add(diff)
+	m2.velocity.add(Vector.invert(diff))
+}
+
+def findLcm(cycles) {
+	return lcm(lcm(new BigInteger(cycles['x']), new BigInteger(cycles['y'])), new BigInteger(cycles['z']))
+}
+
+def lcm(bigint1, bigint2) {
+	return bigint1.multiply(bigint2).abs().divide(bigint1.gcd(bigint2));
+}
+
+def load() {
+	def moons = []
+
+	new File('resources/12').text.trim().split('\n').each { line ->
+		def m = line.trim() =~ /<x=(-?\d+), y=(-?\d+), z=(-?\d+)>/
+		moons << new Moon(new Vector(m[0][1] as int, m[0][2] as int, m[0][3] as int))
+	}
+
+	return moons
+}
+
+def processMoons(moons) {
+	for (def i = 0; i < moons.size() - 1; i++) {
+		for (def j = i + 1; j < moons.size(); j++) {
+			applyGravity(moons[i], moons[j])
+		}
+	}
+
+	moons.each { moon -> moon.applyVelocity() }
+}
+
+def firstPart() {
+	def moons = load()
+
+	1000.times {
+		processMoons(moons)
+	}
+
+	println "First part:  " + moons.inject(0, { result, moon -> result += moon.getEnergy() })
+}
+
+def secondPart() {
+	def moons = load()
+
+	def initialState = []
+	moons.each { moon ->
+		initialState << moon.copy()
+	}
+
+	def cycles = ['x': 0, 'y': 0, 'z': 0]
+	def count = 0
+	while (cycles.any { k, v -> v == 0 }) {
+		processMoons(moons)
+		count++
+
+		def found = [:].withDefault {0}
+
+		for (def m = 0; m < moons.size(); m++) {
+			['x', 'y', 'z'].each { axis ->
+				if (initialState[m].position."${axis}" == moons[m].position."${axis}" && initialState[m].velocity."${axis}" == moons[m].velocity."${axis}") {
+					found[axis] = found[axis] + 1
+				}
+			}
+		}
+
+		found.findAll { axis, num -> num == moons.size() }.each { axis, num ->
+			if (cycles[axis] == 0) {
+				cycles[axis] = count
+			}
+		}
+	}
+
+	println "Second part: " + findLcm(cycles)
+}
+
+firstPart()
+secondPart()
