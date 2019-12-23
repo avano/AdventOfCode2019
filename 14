@@ -1,0 +1,110 @@
+#!/usr/bin/env groovy
+
+import groovy.json.JsonSlurper
+import groovy.json.JsonOutput
+
+class Element {
+	def quantity, name
+
+	Element(elementString) {
+		def split = elementString.split(' ')
+		this.quantity = split[0].trim() as int
+		this.name = split[1].trim()
+	}
+
+	Element(name, quantity) {
+		this.name = name
+		this.quantity = quantity
+	}
+
+	def toOre(formulas, int count, leftovers) {
+		def formula = formulas.find { f -> f.output.name == name }
+		def invocationCount
+		if (leftovers[name] != 0) {
+			if (leftovers[name] >= count) {
+				leftovers[name] -= count
+				return 0
+			} else {
+				count -= leftovers[name]
+				leftovers[name] = 0
+			}
+		}
+
+		if (count == formula.output.quantity) {
+			invocationCount = 1
+		} else if (count > formula.output.quantity) {
+			if (count % formula.output.quantity == 0) {
+				invocationCount = count / formula.output.quantity
+			} else {
+				invocationCount = Math.ceil(count / formula.output.quantity) as int
+				leftovers[name] = leftovers[name] + invocationCount * formula.output.quantity - count
+			}
+		} else {
+			invocationCount = 1
+			leftovers[name] = leftovers[name] + formula.output.quantity - (count % formula.output.quantity) as int
+		}
+
+		if (formula.isFromOre()) {
+			return invocationCount * formula.inputs[0].quantity
+		} else {
+			return formula.inputs.inject(0, { result, input -> result += input.toOre(formulas, input.quantity * invocationCount as int, leftovers) })
+		}
+	}
+}
+
+class Formula {
+	def inputs = []
+	def output
+
+	public Formula(def inputString) {
+		def split = inputString.split('=>')
+		output = new Element(split[1].trim())
+		split[0].trim().split(',').each {
+			inputs << new Element(it.trim())
+		}
+	}
+
+	def isFromOre() {
+		return this.inputs.size() == 1 && this.inputs[0].name == 'ORE'
+	}
+}
+
+def copyMap(m) {
+	return ((Map)new JsonSlurper().parseText(JsonOutput.toJson(m))).withDefault {0}
+}
+
+def firstPart(formulas) {
+	def leftovers = [:].withDefault { 0 }
+	println "First part:  " + new Element('FUEL', 1).toOre(formulas, 1, leftovers)
+}
+
+def secondPart(formulas) {
+	def leftovers = [:].withDefault { 0 }
+	def maxOreCount = new BigInteger('1000000000000')
+	def oreSpent = new BigInteger(0)
+	int fuelStep = 25000
+	def fuelGenerated = 0
+	while (true) {
+		def leftoversCopy = copyMap(leftovers)
+		def currentOreSpent = new Element('FUEL', 1).toOre(formulas, fuelStep, leftoversCopy)
+		if (currentOreSpent + oreSpent > maxOreCount) {
+			if (fuelStep == 1) {
+				println("Second part: ${fuelGenerated}")
+				break
+			}
+			fuelStep /= 2 as int
+		} else {
+			leftovers = leftoversCopy
+			oreSpent += currentOreSpent
+			fuelGenerated += fuelStep
+		}
+	}
+}
+
+def formulas = []
+new File('resources/14').text.trim().eachLine { line ->
+	formulas << new Formula(line)
+}
+
+firstPart(formulas)
+secondPart(formulas)
