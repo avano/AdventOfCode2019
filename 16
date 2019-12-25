@@ -1,0 +1,49 @@
+#!/usr/bin/env groovy
+
+def firstPart() {
+	def input = new File('resources/16').text.trim().collect { it as int }
+	100.times {
+		def newInput = []
+		for (def i = 0; i < input.size(); i++) {
+			def current = 0
+			for (def j = 0; j < input.size(); j++) {
+				def pattern = ((j+1).intdiv(i+1)) % 4
+				if (pattern == 1) {
+					current += input[j]
+				} else if (pattern == 3) {
+					current += input[j] * -1
+				}
+			}
+			newInput << Math.abs(current % 10)
+		}
+		input = newInput
+	}
+	println "First part:  "  + input[0..7].join("")
+}
+
+def secondPart() {
+	def originalInput = new File('resources/16').text.trim()
+	def relevantPartSize = originalInput.size() * 10000 - (originalInput[0..6] as int)
+	def substringLength = relevantPartSize % originalInput.size()
+	def input = originalInput[(originalInput.size() - substringLength)..originalInput.size() - 1]
+
+	relevantPartSize.intdiv(originalInput.size()).times {
+		input += originalInput
+	}
+
+	input = input.collect { it as int }
+
+	100.times {
+		def newInput = []
+		def current = 0
+		for (def i = input.size() - 1; i >= 0; i--) {
+			current += input[i]
+			newInput << ((current % 10) as int)
+		}
+		input = newInput.reverse()
+	}
+	println "Second part: " + input[0..7].join("")
+}
+
+firstPart()
+secondPart()
